@@ -2,13 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 )
 
+var flagPath = flag.String("path", "", "path to tts mod code")
+
 func main() {
+	flag.Parse()
 	// Listen for incoming connections.
 	l, err := net.Listen("tcp", ":39998")
 	if err != nil {
@@ -17,6 +22,7 @@ func main() {
 	}
 	// Close the listener when the application closes.
 	defer l.Close()
+	fmt.Println("Working dir:", *flagPath)
 	fmt.Println("Listening on :39998")
 	for {
 		// Listen for an incoming connection.
@@ -53,15 +59,12 @@ func handleRequest(conn net.Conn) {
 	fmt.Println("received msg ID", msg.MessageID)
 	// Close the connection when you're done with it.
 	conn.Close()
-	// err = os.WriteFile("output", buf.Bytes(), os.ModePerm)
-	// if err != nil {
-	// panic(err)
-	// }
 	switch msg.MessageID {
 	case 1:
 		// Save all files
 		for _, s := range msg.ScriptStates {
-			name := fmt.Sprintf("/home/tom/src/tts/shatterpoint-tts/%s.%s", s.Name, s.GUID)
+			name := fmt.Sprintf("%s.%s", s.Name, s.GUID)
+			name = filepath.Join(*flagPath, name)
 			if s.Script != "" {
 				err := os.WriteFile(name+".lua", []byte(s.Script), os.ModePerm)
 				if err != nil {
@@ -75,9 +78,8 @@ func handleRequest(conn net.Conn) {
 				}
 			}
 		}
+		// TODO handle removed files
 	default:
 		fmt.Println("unhandled messageID", msg.MessageID)
 	}
-
-	// fmt.Println(n, buf.Len())
 }
